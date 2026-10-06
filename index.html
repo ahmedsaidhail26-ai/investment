@@ -3736,11 +3736,16 @@
             alert('لا توجد بيانات للتصدير!');
             return;
         }
+        const excelExportColumns = [
+            "رقم العقد", "وصف الفرصة", "نوع العقد", "مصدر العقد", "مدة العقد",
+            "حالة سريان العقد", "القيمة السنوية للعقد", "القيمة السنوية للعقد شاملة ضريبة القيمة المضافة",
+            "تاريخ بداية العقد", "تاريخ نهاية العقد", "اسم المستثمر"
+        ];
         let exportData = currentFilteredItems.map(item => {
-            let clean = { ...item };
-            delete clean.polygonCoords;
-            delete clean.geometryType;
-            delete clean.id;
+            let clean = {};
+            excelExportColumns.forEach(col => {
+                clean[col] = (item[col] !== undefined && item[col] !== null) ? item[col] : '';
+            });
             return clean;
         });
         let worksheet = XLSX.utils.json_to_sheet(exportData);
