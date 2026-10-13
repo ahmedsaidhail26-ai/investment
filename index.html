@@ -3923,7 +3923,7 @@
     function say(t, who) { const l = $('aiLog'), d = document.createElement('div'); d.className = 'ai-msg ' + who; d.textContent = t; l.appendChild(d); l.scrollTop = l.scrollHeight; }
     function initAI() {
         if (aiReady) return; aiReady = true;
-        const fab = document.createElement('button'); fab.id = 'aiFab'; fab.textContent = '\nمساعد الخريطة';
+        const fab = document.createElement('button'); fab.id = 'aiFab'; fab.textContent = '\nالمساعد الذكي';
         const p = document.createElement('div'); p.id = 'aiPanel';
         p.innerHTML = '<header>مساعد الخريطة الذكي</header><div id="aiLog"></div><div id="aiForm"><input id="aiInput" placeholder="اكتب أمرك بالعربية..." autocomplete="off"><button id="aiSend">إرسال</button></div>';
         document.body.append(fab, p);
