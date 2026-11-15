@@ -160,6 +160,7 @@
         .kpi-card.muntahi { border-right-color: #A68365; }
         .kpi-card.total-val { border-right-color: #A68365; }
         .kpi-card.park { border-right-color: #A68365; }
+        .kpi-card.proposed { border-right-color: #A68365; }
         .kpi-card.exp-30 { border-right-color: #A68365; }
         .kpi-card.exp-60 { border-right-color: #A68365; }
         .kpi-card.exp-90 { border-right-color: #A68365; }
@@ -464,6 +465,7 @@
         .status-sari { background: #d1fae5; color: #065f46; }
         .status-muntahi { background: #fee2e2; color: #991b1b; }
         .status-other { background: var(--border-color); color: var(--text-color); }
+        .status-proposed { background: #fef3c7; color: #92400e; }
 
         .details-box {
             background: #D6B87E;
@@ -810,7 +812,7 @@
             <div class="category-group-box">
                 <label>تصنيف الأصول حسب حالة الاستثمار:</label>
                 <div class="categories-bar" id="landStatusChips">
-                    <div class="cat-chip active" data-type="landStatus" data-val="all">جميع الأصول الإستثمارية</div>
+                    <div class="cat-chip active" data-type="landStatus" data-val="all">جميع الأصول</div>
                 </div>
             </div>
 
@@ -1288,6 +1290,7 @@
                 <div class="legend-item"><div class="legend-color-box" style="background-color: #2563eb;"></div>أصل عليه عقد</div>
                 <div class="legend-item"><div class="legend-color-box" style="background-color: #dc2626;"></div>أصل شاغر</div>
                 <div class="legend-item"><div class="legend-color-box" style="background-color: #16a34a;"></div>حديقة استثمارية</div>
+                <div class="legend-item"><div class="legend-color-box" style="background-color: #F0EA00;"></div>مقترح</div>
             `;
         } else if (currentActiveTab === 'tabForas') {
             html = `
@@ -1511,7 +1514,7 @@
         typeContainer.innerHTML = `<div class="cat-chip active" data-type="contractType" data-val="all">جميــــع العقــــــــود</div>`;
         
         const landStatusContainer = document.getElementById('landStatusChips');
-        landStatusContainer.innerHTML = `<div class="cat-chip active" data-type="landStatus" data-val="all">جميع الأصول الإستثمارية</div>`;
+        landStatusContainer.innerHTML = `<div class="cat-chip active" data-type="landStatus" data-val="all">جميع الأصول</div>`;
 
         const municipalityContainer = document.getElementById('municipalityChips');
         if (municipalityContainer) {
@@ -2028,11 +2031,14 @@
             let contractedCount = 0;
             let emptyCount = 0;
             let parkCount = 0;
+            let proposedCount = 0;
             let totalArea = 0;
 
             polygons.forEach(item => {
                 let landStatus = String(item['حالة الاستثمار'] || '').trim();
-                if (landStatus.includes('أصل عليه عقد')) {
+                if (landStatus.includes('مقترح')) {
+                    proposedCount++;
+                } else if (landStatus.includes('أصل عليه عقد')) {
                     contractedCount++;
                 } else if (landStatus.includes('أصل شاغر')) {
                     emptyCount++;
@@ -2063,6 +2069,10 @@
                 <div class="kpi-card park">
                     <span class="kpi-title">الحدائق الاستثمارية</span>
                     <span class="kpi-value">${parkCount.toLocaleString()}</span>
+                </div>
+                <div class="kpi-card proposed">
+                    <span class="kpi-title">الأصول المقترحة</span>
+                    <span class="kpi-value">${proposedCount.toLocaleString()}</span>
                 </div>
                 <div class="kpi-card total-val">
                     <span class="kpi-title">إجمالي المساحة (م²)</span>
@@ -2199,7 +2209,8 @@
             let status = item['حالة سريان العقد'] || item['حالة الاستثمار'] || item['حالة الفرصة'] || 'غير متاح';
 
             let badgeClass = 'status-other';
-            if (status.includes('ساري') || status.includes('أصل عليه عقد') || status.includes('متاحة')) badgeClass = 'status-sari';
+            if (status.includes('مقترح')) badgeClass = 'status-proposed';
+            else if (status.includes('ساري') || status.includes('أصل عليه عقد') || status.includes('متاحة')) badgeClass = 'status-sari';
             else if (status.includes('منتهي') || status.includes('أصل شاغر')) badgeClass = 'status-muntahi';
 
             div.innerHTML = `<span>${contractNo}${extraInfo} (${item.geometryType})</span> <span class="status-badge ${badgeClass}">${status}</span>`;
@@ -2245,7 +2256,10 @@
                     fillColor = '#8b5cf6';
                 }
             } else if (item.geometryType === 'Polygon') {
-                if (status.includes('أصل شاغر')) {
+                if (status.includes('مقترح')) {
+                    markerColor = '#F0EA00'; 
+                    fillColor = '#F0EA00';   
+                } else if (status.includes('أصل شاغر')) {
                     markerColor = '#dc2626'; 
                     fillColor = '#dc2626';   
                 } else if (status.includes('أصل عليه عقد')) {
@@ -3923,7 +3937,7 @@
     function say(t, who) { const l = $('aiLog'), d = document.createElement('div'); d.className = 'ai-msg ' + who; d.textContent = t; l.appendChild(d); l.scrollTop = l.scrollHeight; }
     function initAI() {
         if (aiReady) return; aiReady = true;
-        const fab = document.createElement('button'); fab.id = 'aiFab'; fab.textContent = '\nالمساعد الذكي';
+        const fab = document.createElement('button'); fab.id = 'aiFab'; fab.textContent = '\nمساعد الخريطة';
         const p = document.createElement('div'); p.id = 'aiPanel';
         p.innerHTML = '<header>مساعد الخريطة الذكي</header><div id="aiLog"></div><div id="aiForm"><input id="aiInput" placeholder="اكتب أمرك بالعربية..." autocomplete="off"><button id="aiSend">إرسال</button></div>';
         document.body.append(fab, p);
