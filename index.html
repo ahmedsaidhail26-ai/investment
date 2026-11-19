@@ -161,6 +161,7 @@
         .kpi-card.total-val { border-right-color: #A68365; }
         .kpi-card.park { border-right-color: #A68365; }
         .kpi-card.proposed { border-right-color: #A68365; }
+        .kpi-card.offered { border-right-color: #A68365; }
         .kpi-card.exp-30 { border-right-color: #A68365; }
         .kpi-card.exp-60 { border-right-color: #A68365; }
         .kpi-card.exp-90 { border-right-color: #A68365; }
@@ -466,6 +467,7 @@
         .status-muntahi { background: #fee2e2; color: #991b1b; }
         .status-other { background: var(--border-color); color: var(--text-color); }
         .status-proposed { background: #fef3c7; color: #92400e; }
+        .status-offered { background: #cffafe; color: #155e75; }
 
         .details-box {
             background: #D6B87E;
@@ -812,7 +814,7 @@
             <div class="category-group-box">
                 <label>تصنيف الأصول حسب حالة الاستثمار:</label>
                 <div class="categories-bar" id="landStatusChips">
-                    <div class="cat-chip active" data-type="landStatus" data-val="all">جميع الأصول</div>
+                    <div class="cat-chip active" data-type="landStatus" data-val="all">جميع الأصول الإستثمارية</div>
                 </div>
             </div>
 
@@ -1290,7 +1292,8 @@
                 <div class="legend-item"><div class="legend-color-box" style="background-color: #2563eb;"></div>أصل عليه عقد</div>
                 <div class="legend-item"><div class="legend-color-box" style="background-color: #dc2626;"></div>أصل شاغر</div>
                 <div class="legend-item"><div class="legend-color-box" style="background-color: #16a34a;"></div>حديقة استثمارية</div>
-                <div class="legend-item"><div class="legend-color-box" style="background-color: #F0EA00;"></div>مقترح</div>
+                <div class="legend-item"><div class="legend-color-box" style="background-color: #FFFF00;"></div>مقترح</div>
+                <div class="legend-item"><div class="legend-color-box" style="background-color: #ED7D31;"></div>مطروح الآن</div>
             `;
         } else if (currentActiveTab === 'tabForas') {
             html = `
@@ -1514,7 +1517,7 @@
         typeContainer.innerHTML = `<div class="cat-chip active" data-type="contractType" data-val="all">جميــــع العقــــــــود</div>`;
         
         const landStatusContainer = document.getElementById('landStatusChips');
-        landStatusContainer.innerHTML = `<div class="cat-chip active" data-type="landStatus" data-val="all">جميع الأصول</div>`;
+        landStatusContainer.innerHTML = `<div class="cat-chip active" data-type="landStatus" data-val="all">جميع الأصول الإستثمارية</div>`;
 
         const municipalityContainer = document.getElementById('municipalityChips');
         if (municipalityContainer) {
@@ -2032,11 +2035,14 @@
             let emptyCount = 0;
             let parkCount = 0;
             let proposedCount = 0;
+            let offeredCount = 0;
             let totalArea = 0;
 
             polygons.forEach(item => {
                 let landStatus = String(item['حالة الاستثمار'] || '').trim();
-                if (landStatus.includes('مقترح')) {
+                if (landStatus.includes('مطروح الآن')) {
+                    offeredCount++;
+                } else if (landStatus.includes('مقترح')) {
                     proposedCount++;
                 } else if (landStatus.includes('أصل عليه عقد')) {
                     contractedCount++;
@@ -2073,6 +2079,10 @@
                 <div class="kpi-card proposed">
                     <span class="kpi-title">الأصول المقترحة</span>
                     <span class="kpi-value">${proposedCount.toLocaleString()}</span>
+                </div>
+                <div class="kpi-card offered">
+                    <span class="kpi-title">الأصول المطروحة الآن</span>
+                    <span class="kpi-value">${offeredCount.toLocaleString()}</span>
                 </div>
                 <div class="kpi-card total-val">
                     <span class="kpi-title">إجمالي المساحة (م²)</span>
@@ -2209,7 +2219,8 @@
             let status = item['حالة سريان العقد'] || item['حالة الاستثمار'] || item['حالة الفرصة'] || 'غير متاح';
 
             let badgeClass = 'status-other';
-            if (status.includes('مقترح')) badgeClass = 'status-proposed';
+            if (status.includes('مطروح الآن')) badgeClass = 'status-offered';
+            else if (status.includes('مقترح')) badgeClass = 'status-proposed';
             else if (status.includes('ساري') || status.includes('أصل عليه عقد') || status.includes('متاحة')) badgeClass = 'status-sari';
             else if (status.includes('منتهي') || status.includes('أصل شاغر')) badgeClass = 'status-muntahi';
 
@@ -2256,9 +2267,12 @@
                     fillColor = '#8b5cf6';
                 }
             } else if (item.geometryType === 'Polygon') {
-                if (status.includes('مقترح')) {
-                    markerColor = '#F0EA00'; 
-                    fillColor = '#F0EA00';   
+                if (status.includes('مطروح الآن')) {
+                    markerColor = '#ED7D31'; 
+                    fillColor = '#ED7D31';   
+                } else if (status.includes('مقترح')) {
+                    markerColor = '#FFFF00'; 
+                    fillColor = '#FFFF00';   
                 } else if (status.includes('أصل شاغر')) {
                     markerColor = '#dc2626'; 
                     fillColor = '#dc2626';   
