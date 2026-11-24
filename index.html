@@ -386,7 +386,7 @@
             display: flex;
             gap: 6px;
             flex-wrap: wrap;
-            max-height: 80px;
+            max-height: 65px;
             overflow-y: auto;
             padding: 2px;
         }
@@ -698,6 +698,39 @@
         #aiForm{display:flex;gap:6px;padding:8px;border-top:1px solid #cbd5e1}
         #aiInput{flex:1;padding:7px;border:1px solid #A68365;border-radius:8px;font-family:inherit}
         #aiSend{background:#023059;color:#fff;border:0;border-radius:8px;padding:0 12px;cursor:pointer}
+            /* ===== أداة قياس الطول ===== */
+        .measure-ctl { direction: rtl; font-family: inherit; margin-top: 10px !important; }
+        .measure-ctl .m-toggle { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: #fff; border-radius: 8px; box-shadow: 0 1px 5px rgba(0,0,0,.45); cursor: pointer; color: #023059; border: 0; padding: 0; }
+        .measure-ctl .m-toggle:hover { background: #ECF5FE; }
+        .measure-ctl.open .m-toggle { display: none; }
+        .measure-ctl .m-panel { display: none; width: 236px; background: #fff; color: #023059; border-radius: 10px; box-shadow: 0 4px 16px rgba(2,48,89,.35); overflow: hidden; font-size: .78rem; }
+        .measure-ctl.open .m-panel { display: block; }
+        .m-head { background: #023059; color: #D6B87E; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; font-weight: 800; font-size: .85rem; }
+        .m-head button { background: transparent; border: 0; color: #D6B87E; font-size: 1.2rem; line-height: 1; cursor: pointer; padding: 0 2px; }
+        .m-total { text-align: center; padding: 10px 12px 6px; }
+        .m-total small { display: block; color: #64748b; font-weight: 700; }
+        .m-total b { display: block; font-size: 1.45rem; color: #023059; margin-top: 2px; direction: ltr; }
+        .m-row { display: flex; justify-content: space-between; padding: 4px 14px; border-top: 1px solid #e2e8f0; }
+        .m-row b { direction: ltr; }
+        .m-units { display: flex; gap: 4px; padding: 8px 12px 4px; }
+        .m-units button { flex: 1; border: 1px solid #cbd5e1; background: #f8fafc; color: #023059; border-radius: 6px; padding: 4px 0; cursor: pointer; font-family: inherit; font-size: .72rem; font-weight: 700; }
+        .m-units button.on { background: #023059; color: #D6B87E; border-color: #023059; }
+        .m-hint { padding: 6px 12px; color: #475569; background: #ECF5FE; font-size: .7rem; line-height: 1.5; }
+        .m-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 8px 12px 10px; }
+        .m-actions button { border: 0; border-radius: 6px; padding: 6px 0; cursor: pointer; font-family: inherit; font-weight: 700; font-size: .75rem; background: #e2e8f0; color: #023059; }
+        .m-actions button:hover { filter: brightness(.95); }
+        .m-actions .m-main { grid-column: 1 / -1; background: #023059; color: #D6B87E; }
+        .m-actions .m-main.running { background: #e11d48; color: #fff; }
+        .m-seg, .m-tip { background: #fff; color: #023059; border: 1px solid #e11d48; border-radius: 4px; padding: 1px 5px; font-size: 11px; font-weight: 800; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,.35); direction: ltr; width: auto !important; height: auto !important; line-height: 1.4; }
+        .m-tip { background: #e11d48; color: #fff; border-color: #fff; font-size: 12px; }
+        .measuring-map, .measuring-map .leaflet-interactive { cursor: crosshair !important; }
+        [data-theme="dark"] .measure-ctl .m-toggle, [data-theme="dark"] .measure-ctl .m-panel { background: #1e293b; color: #f1f5f9; }
+        [data-theme="dark"] .m-total b, [data-theme="dark"] .m-units button { color: #f1f5f9; }
+        [data-theme="dark"] .m-units button { background: #334155; border-color: #475569; }
+        [data-theme="dark"] .m-units button.on { background: #D6B87E; color: #023059; }
+        [data-theme="dark"] .m-hint { background: #0f172a; color: #cbd5e1; }
+        [data-theme="dark"] .m-row { border-color: #334155; }
+        [data-theme="dark"] .m-actions button:not(.m-main) { background: #334155; color: #f1f5f9; }
     </style>
 </head>
 <body>
@@ -1188,6 +1221,109 @@
 
     setTimeout(() => { map.invalidateSize(); }, 200);
 
+    /* ===== أداة قياس الطول (تظهر في تبويبي الأصول والزوائد) ===== */
+    (function () {
+        const RED = '#e11d48';
+        map.createPane('measurePane').style.zIndex = 650;
+        const rend = L.svg({ pane: 'measurePane' });
+        const layer = L.layerGroup().addTo(map);
+        let pts = [], active = false, cursor = null, unit = 'auto', down = null;
+
+        const num = (v, d) => v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+        const fmt = m => unit === 'm' ? num(m, 2) + ' م' : unit === 'km' ? num(m / 1000, 3) + ' كم' : unit === 'mi' ? num(m / 1609.344, 3) + ' ميل' : (m < 1000 ? num(m, 2) + ' م' : num(m / 1000, 3) + ' كم');
+        const seg = i => pts[i].distanceTo(pts[i + 1]);
+        const total = () => { let t = 0; for (let i = 0; i < pts.length - 1; i++) t += seg(i); return t; };
+        const lbl = (ll, cls, txt) => L.marker(ll, { interactive: false, keyboard: false, icon: L.divIcon({ className: '', html: '<span class="' + cls + '">' + txt + '</span>', iconSize: [0, 0] }) });
+
+        const ctl = L.control({ position: 'topright' });
+        ctl.onAdd = function () {
+            const d = L.DomUtil.create('div', 'leaflet-control measure-ctl');
+            d.innerHTML =
+                '<button class="m-toggle" title="أداة قياس الطول" aria-label="أداة قياس الطول"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg></button>' +
+                '<div class="m-panel"><div class="m-head"><span>أداة قياس الطول</span><button class="m-x" title="إغلاق">×</button></div>' +
+                '<div class="m-total"><small>الطول الإجمالي</small><b id="mTotal">0.00 م</b></div>' +
+                '<div class="m-row"><span>آخر مقطع</span><b id="mLast">—</b></div>' +
+                '<div class="m-row"><span>عدد النقاط</span><b id="mCnt">0</b></div>' +
+                '<div class="m-units"><button data-u="auto" class="on">تلقائي</button><button data-u="m">م</button><button data-u="km">كم</button><button data-u="mi">ميل</button></div>' +
+                '<div class="m-hint" id="mHint"></div>' +
+                '<div class="m-actions"><button class="m-main" id="mMain"></button><button id="mUndo">تراجع</button><button id="mClear">مسح</button><button id="mCopy" style="grid-column:1/-1">نسخ النتيجة</button></div></div>';
+            L.DomEvent.disableClickPropagation(d);
+            L.DomEvent.disableScrollPropagation(d);
+            return d;
+        };
+        ctl.addTo(map);
+        const root = ctl.getContainer(), q = s => root.querySelector(s);
+
+        function draw() {
+            layer.clearLayers();
+            if (pts.length) {
+                L.polyline(pts, { pane: 'measurePane', renderer: rend, color: '#fff', weight: 7, opacity: .95, interactive: false }).addTo(layer);
+                L.polyline(pts, { pane: 'measurePane', renderer: rend, color: RED, weight: 3, interactive: false }).addTo(layer);
+                pts.forEach(p => L.circleMarker(p, { pane: 'measurePane', renderer: rend, radius: 5, color: RED, weight: 2, fillColor: '#fff', fillOpacity: 1, interactive: false }).addTo(layer));
+                for (let i = 0; i < pts.length - 1; i++) if (pts.length > 2) lbl(L.latLng((pts[i].lat + pts[i + 1].lat) / 2, (pts[i].lng + pts[i + 1].lng) / 2), 'm-seg', fmt(seg(i))).addTo(layer);
+                if (active && cursor) {
+                    const last = pts[pts.length - 1];
+                    L.polyline([last, cursor], { pane: 'measurePane', renderer: rend, color: RED, weight: 2, dashArray: '6 6', interactive: false }).addTo(layer);
+                }
+                if (pts.length > 1) lbl(pts[pts.length - 1], 'm-tip', fmt(total())).addTo(layer);
+            }
+            q('#mTotal').textContent = fmt(total());
+            q('#mLast').textContent = pts.length > 1 ? fmt(seg(pts.length - 2)) : '—';
+            q('#mCnt').textContent = pts.length;
+            q('#mMain').textContent = active ? 'إنهاء القياس' : (pts.length ? 'متابعة القياس' : 'بدء القياس');
+            q('#mMain').classList.toggle('running', active);
+            q('#mHint').textContent = active ? 'انقر على الخريطة لإضافة نقطة. انقر مرتين أو اضغط "إنهاء" لإنهاء القياس.' : 'اضغط "بدء القياس" ثم حدد نقاط المسار على الخريطة.';
+            map.getContainer().classList.toggle('measuring-map', active);
+        }
+        function setActive(v) { active = v; cursor = null; draw(); }
+        function reset() { pts = []; active = false; cursor = null; root.classList.remove('open'); draw(); }
+
+        q('.m-toggle').addEventListener('click', () => { root.classList.add('open'); setActive(true); });
+        q('.m-x').addEventListener('click', reset);
+        q('#mMain').addEventListener('click', () => setActive(!active));
+        q('#mUndo').addEventListener('click', () => { pts.pop(); draw(); });
+        q('#mClear').addEventListener('click', () => { pts = []; draw(); });
+        q('#mCopy').addEventListener('click', () => {
+            const t = pts.length > 1 ? fmt(total()) : '';
+            if (!t) return;
+            (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).catch(() => {
+                const a = document.createElement('textarea'); a.value = t; document.body.appendChild(a); a.select(); document.execCommand('copy'); a.remove();
+            });
+            const b = q('#mCopy'); b.textContent = 'تم النسخ ✓'; setTimeout(() => b.textContent = 'نسخ النتيجة', 1200);
+        });
+        root.querySelectorAll('.m-units button').forEach(b => b.addEventListener('click', () => {
+            unit = b.dataset.u; root.querySelectorAll('.m-units button').forEach(x => x.classList.toggle('on', x === b)); draw();
+        }));
+
+        // التقاط النقرات قبل أن تصل إلى عناصر الخريطة حتى لا تُفتح تفاصيل الأصول أثناء القياس
+        const c = map.getContainer();
+        const inCtl = e => e.target.closest && e.target.closest('.leaflet-control');
+        c.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; }, true);
+        c.addEventListener('click', e => {
+            if (!active || inCtl(e)) return;
+            e.stopPropagation(); e.preventDefault();
+            const moved = down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6; down = null;
+            if (moved) return;
+            if (e.detail >= 2) { setActive(false); return; }
+            pts.push(map.mouseEventToLatLng(e)); draw();
+        }, true);
+        c.addEventListener('dblclick', e => { if (active && !inCtl(e)) { e.stopPropagation(); e.preventDefault(); } }, true);
+        c.addEventListener('mousemove', e => { if (active && pts.length && !inCtl(e)) { cursor = map.mouseEventToLatLng(e); draw(); } }, true);
+        document.addEventListener('keydown', e => { if (e.key === 'Escape' && active) setActive(false); });
+
+        // إظهار الأداة في تبويبي الأصول والزوائد فقط (ويُعاد ضبط القياس عند التنقل بينهما)
+        const tabEls = ['tabPolygons', 'tabZwaed'].map(id => document.getElementById(id)).filter(Boolean);
+        let prevTab = null;
+        const sync = () => {
+            const cur = (tabEls.find(t => t.classList.contains('active')) || {}).id || null;
+            root.style.display = cur ? '' : 'none';
+            if (cur !== prevTab) { prevTab = cur; if (pts.length || active || root.classList.contains('open')) reset(); }
+        };
+        const mo = new MutationObserver(sync);
+        tabEls.forEach(t => mo.observe(t, { attributes: true, attributeFilter: ['class'] }));
+        sync(); draw();
+    })();
+
     let allItems = [];
     let currentFilteredItems = [];
     let selectedItemForDetails = null;
@@ -1292,8 +1428,8 @@
                 <div class="legend-item"><div class="legend-color-box" style="background-color: #2563eb;"></div>أصل عليه عقد</div>
                 <div class="legend-item"><div class="legend-color-box" style="background-color: #dc2626;"></div>أصل شاغر</div>
                 <div class="legend-item"><div class="legend-color-box" style="background-color: #16a34a;"></div>حديقة استثمارية</div>
-                <div class="legend-item"><div class="legend-color-box" style="background-color: #FFFF00;"></div>مقترح</div>
-                <div class="legend-item"><div class="legend-color-box" style="background-color: #ED7D31;"></div>مطروح الآن</div>
+                <div class="legend-item"><div class="legend-color-box" style="background-color: #f59e0b;"></div>مقترح</div>
+                <div class="legend-item"><div class="legend-color-box" style="background-color: #0891b2;"></div>مطروح الآن</div>
             `;
         } else if (currentActiveTab === 'tabForas') {
             html = `
@@ -2268,11 +2404,11 @@
                 }
             } else if (item.geometryType === 'Polygon') {
                 if (status.includes('مطروح الآن')) {
-                    markerColor = '#ED7D31'; 
-                    fillColor = '#ED7D31';   
+                    markerColor = '#0e7490'; 
+                    fillColor = '#06b6d4';   
                 } else if (status.includes('مقترح')) {
-                    markerColor = '#FFFF00'; 
-                    fillColor = '#FFFF00';   
+                    markerColor = '#d97706'; 
+                    fillColor = '#f59e0b';   
                 } else if (status.includes('أصل شاغر')) {
                     markerColor = '#dc2626'; 
                     fillColor = '#dc2626';   
