@@ -467,8 +467,8 @@
         .status-sari { background: #d1fae5; color: #065f46; }
         .status-muntahi { background: #fee2e2; color: #991b1b; }
         .status-other { background: var(--border-color); color: var(--text-color); }
-        .status-proposed { background: #fef3c7; color: #92400e; }
-        .status-offered { background: #cffafe; color: #155e75; }
+        .status-proposed { background: #FFC000; color: #023059; }
+        .status-offered { background: #ED7D31; color: #023059; }
 
         .details-box {
             background: #D6B87E;
@@ -1429,8 +1429,8 @@
                 <div class="legend-item"><div class="legend-color-box" style="background-color: #2563eb;"></div>أصل عليه عقد</div>
                 <div class="legend-item"><div class="legend-color-box" style="background-color: #dc2626;"></div>أصل شاغر</div>
                 <div class="legend-item"><div class="legend-color-box" style="background-color: #16a34a;"></div>حديقة استثمارية</div>
-                <div class="legend-item"><div class="legend-color-box" style="background-color: #f59e0b;"></div>مقترح</div>
-                <div class="legend-item"><div class="legend-color-box" style="background-color: #0891b2;"></div>مطروح الآن</div>
+                <div class="legend-item"><div class="legend-color-box" style="background-color: #FFC000;"></div>مقترح</div>
+                <div class="legend-item"><div class="legend-color-box" style="background-color: #ED7D31;"></div>مطروح الآن</div>
             `;
         } else if (currentActiveTab === 'tabForas') {
             html = `
@@ -2405,11 +2405,11 @@
                 }
             } else if (item.geometryType === 'Polygon') {
                 if (status.includes('مطروح الآن')) {
-                    markerColor = '#0e7490'; 
-                    fillColor = '#06b6d4';   
+                    markerColor = '#B5541A'; 
+                    fillColor = '#ED7D31';   
                 } else if (status.includes('مقترح')) {
-                    markerColor = '#d97706'; 
-                    fillColor = '#f59e0b';   
+                    markerColor = '#B38600'; 
+                    fillColor = '#FFC000';   
                 } else if (status.includes('أصل شاغر')) {
                     markerColor = '#dc2626'; 
                     fillColor = '#dc2626';   
